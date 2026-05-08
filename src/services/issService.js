@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Open-Notify only supports HTTP, which gets blocked by Vercel's HTTPS (Mixed Content).
 // We use a proxy to route the request over HTTPS.
-const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
+const CORS_PROXY = 'https://corsproxy.io/?';
 
 const ISS_POSITION_URL = `${CORS_PROXY}${encodeURIComponent('http://api.open-notify.org/iss-now.json')}`;
 const ISS_PEOPLE_URL = `${CORS_PROXY}${encodeURIComponent('http://api.open-notify.org/astros.json')}`;
