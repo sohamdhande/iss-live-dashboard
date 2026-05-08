@@ -1,43 +1,63 @@
 import axios from 'axios';
 
-// Open-Notify only supports HTTP, which gets blocked by Vercel's HTTPS (Mixed Content).
-// We use a proxy to route the request over HTTPS, but ONLY if we are actually on HTTPS.
-// Locally (HTTP), we connect directly to avoid proxy DNS/rate-limit issues.
-const isHttps = typeof window !== 'undefined' && window.location.protocol === 'https:';
-const CORS_PROXY = isHttps ? 'https://api.allorigins.win/raw?url=' : '';
-
-const ISS_POSITION_URL = isHttps 
-  ? `${CORS_PROXY}${encodeURIComponent('http://api.open-notify.org/iss-now.json')}`
-  : 'http://api.open-notify.org/iss-now.json';
-
-const ISS_PEOPLE_URL = isHttps
-  ? `${CORS_PROXY}${encodeURIComponent('http://api.open-notify.org/astros.json')}`
-  : 'http://api.open-notify.org/astros.json';
+// We now use Vercel's built-in rewrites (in production) and Vite's proxy (in development)
+// This completely bypasses the need for unreliable external CORS proxies.
+const ISS_POSITION_URL = '/api/iss-now';
+const ISS_PEOPLE_URL = '/api/astros';
 
 /**
  * Fetches the current position of the ISS.
  * Returns { latitude, longitude, timestamp }.
+ * Uses fallback simulated data if the API rate-limits (429) or fails (502).
  */
 export async function fetchISSPosition() {
-  const response = await axios.get(ISS_POSITION_URL);
-  const { iss_position, timestamp } = response.data;
-  return {
-    latitude: parseFloat(iss_position.latitude),
-    longitude: parseFloat(iss_position.longitude),
-    timestamp,
-  };
+  try {
+    const response = await axios.get(ISS_POSITION_URL, { timeout: 5000 });
+    const { iss_position, timestamp } = response.data;
+    return {
+      latitude: parseFloat(iss_position.latitude),
+      longitude: parseFloat(iss_position.longitude),
+      timestamp,
+    };
+  } catch (error) {
+    console.warn('ISS API failed (e.g., 429 or 502). Using fallback simulation data.', error.message);
+    // Simulate a moving ISS position based on current time
+    const now = Date.now() / 1000;
+    return {
+      latitude: (Math.sin(now / 1000) * 51.6), // Oscillates between -51.6 and 51.6
+      longitude: (now % 360) - 180,           // Cycles through -180 to 180
+      timestamp: Math.floor(now),
+    };
+  }
 }
 
 /**
  * Fetches the list of people currently in space.
  * Returns { number, people: [{ name, craft }] }.
+ * Uses fallback static data if the API rate-limits (429) or fails (502).
  */
 export async function fetchPeopleInSpace() {
-  const response = await axios.get(ISS_PEOPLE_URL);
-  return {
-    number: response.data.number,
-    people: response.data.people,
-  };
+  try {
+    const response = await axios.get(ISS_PEOPLE_URL, { timeout: 5000 });
+    return {
+      number: response.data.number,
+      people: response.data.people,
+    };
+  } catch (error) {
+    console.warn('People API failed (e.g., 429). Using fallback static data.', error.message);
+    return {
+      number: 7,
+      people: [
+        { name: 'Oleg Kononenko', craft: 'ISS' },
+        { name: 'Nikolai Chub', craft: 'ISS' },
+        { name: 'Tracy Caldwell Dyson', craft: 'ISS' },
+        { name: 'Matthew Dominick', craft: 'ISS' },
+        { name: 'Michael Barratt', craft: 'ISS' },
+        { name: 'Jeanette Epps', craft: 'ISS' },
+        { name: 'Alexander Grebenkin', craft: 'ISS' },
+      ],
+    };
+  }
 }
 
 /**
