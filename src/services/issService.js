@@ -1,7 +1,11 @@
 import axios from 'axios';
 
-const ISS_POSITION_URL = 'http://api.open-notify.org/iss-now.json';
-const ISS_PEOPLE_URL = 'http://api.open-notify.org/astros.json';
+// Open-Notify only supports HTTP, which gets blocked by Vercel's HTTPS (Mixed Content).
+// We use a proxy to route the request over HTTPS.
+const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
+
+const ISS_POSITION_URL = `${CORS_PROXY}${encodeURIComponent('http://api.open-notify.org/iss-now.json')}`;
+const ISS_PEOPLE_URL = `${CORS_PROXY}${encodeURIComponent('http://api.open-notify.org/astros.json')}`;
 
 /**
  * Fetches the current position of the ISS.
